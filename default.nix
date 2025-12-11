@@ -6,12 +6,12 @@ let
     readFile
     split
     filter
-    getEnv
     match
     isString
     fromJSON
     floor
     head
+    elemAt
     ;
 
   get = file: fetchurl "file://${file}";
@@ -47,7 +47,30 @@ in
     in
     substring 13 ((stringLength raw) - 14) raw;
 
-  shell = substring 44 (-1) (get (getEnv "SHELL"));
+  shell =
+    let
+      uid =
+        read "/proc/self/status"
+        |> split "\n"
+        |> filter (
+          line:
+          isString line
+          &&
+            match "^Uid:[[:space:]]+[0-9]+[[:space:]]+[0-9]+[[:space:]]+[0-9]+[[:space:]]+[0-9]+$" line != null
+        )
+        |> head
+        |> split "\t"
+        |> (a: elemAt a 2);
+
+      result =
+        read "/etc/passwd"
+        |> split "\n"
+        |> filter (line: isString line && match ".*:.*:${uid}:.*" line != null)
+        |> head
+        |> split ":"
+        |> (a: elemAt a 12);
+    in
+    result;
   #
   # term = get "/proc/self/fd/0";
   #
